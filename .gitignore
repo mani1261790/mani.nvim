@@ -1,0 +1,19 @@
+.DS_Store
+.nvimlog
+
+# Local plugin/vendor installs
+plugged/
+
+# Neovim local state if it appears under this directory
+spell/
+session/
+sessions/
+shada/
+swap/
+undo/
+backup/
+
+# Temp files
+*.swp
+*.swo
+*~
