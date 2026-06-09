@@ -1,60 +1,64 @@
-# Neovim Config
+# nvim-single-file-config
 
-This repository contains a single-file Neovim setup centered on `init.lua`.
+Single-file Neovim configuration built around `init.lua`, with a VS Code-like layout:
 
-## Included
+- left column: file tree + terminal list
+- right column: editor on top + one shared terminal panel on bottom
+
+## Features
+
+- single-file config centered on `init.lua`
+- persistent terminal workflow with a terminal list in the sidebar
+- one shared terminal panel that switches terminals instead of stacking splits
+- cwd sync between terminal and file tree via OSC 7
+- notebook-friendly setup with `jupytext`, `molten`, and `NotebookNavigator`
+- direct panel navigation keys
+
+## Direct keys
+
+- `F1`: file tree
+- `F2`: editor
+- `F3`: terminal
+- `F4`: terminal list
+- `F7`: soft restart in the same working directory
+- `F8`: next panel
+- `Shift-F8`: previous panel
+
+## Files tracked in this repo
 
 - `init.lua`
 - `lazy-lock.json`
 - `terminal-hooks.zsh`
+- `.gitignore`
 
-## Excluded
+## Why `.gitignore` is kept
 
-The repository does not track local-only files such as:
+This config creates or coexists with local-only files that should not be published:
 
 - `plugged/`
 - `.DS_Store`
 - `.nvimlog`
-- swap and temp files
+- swap / backup / temp files
+
+Keeping `.gitignore` in the repo prevents accidental pushes of local plugin installs and machine-specific noise.
 
 ## Requirements
 
 - Neovim 0.11+
 - `git`
-- a Nerd Font-enabled terminal is recommended
+- a terminal with function keys available to Neovim
+- Nerd Font recommended
 
 ## Install
 
 ```bash
-mkdir -p ~/.config
-git clone <your-repo-url> ~/.config/nvim
+git clone https://github.com/mani1261790/nvim-single-file-config.git ~/.config/nvim
 nvim
 ```
 
 On first launch, plugins are installed automatically through `lazy.nvim`.
 
-## Key points
+## Notes
 
-- Left sidebar: file tree + terminal list
-- Right side: editor on top, one shared terminal panel on bottom
-- Terminal list can create, switch, and close terminals
-- `F1` to `F4`: jump across panels
-- `F7`: soft restart in the same working directory
-- `F8` / `Shift-F8`: cycle panels forward/backward
-
-## Publish
-
-```bash
-cd ~/.config/nvim
-git init
-git add init.lua lazy-lock.json terminal-hooks.zsh .gitignore README.md
-git commit -m "Publish Neovim config"
-```
-
-Then create a GitHub repo and push:
-
-```bash
-git branch -M main
-git remote add origin <your-github-repo-url>
-git push -u origin main
-```
+- `Cmd`-based shortcuts are not relied on because many terminal apps intercept them before Neovim receives them.
+- The restart command is a soft restart that rebuilds the layout in the current working directory.
