@@ -1004,6 +1004,194 @@ local function notebook_statusline_component()
   return "  nb:" .. kernels .. " "
 end
 
+local function notebook_jupyter_data_dir()
+  local dir = vim.fs.joinpath(vim.fn.fnamemodify(vim.fn.tempname(), ":h"), "nvim-jupyter-data")
+  if vim.fn.isdirectory(dir) == 0 then
+    vim.fn.mkdir(dir, "p")
+  end
+  return dir
+end
+
+local function notebook_metadata(ipynb_path)
+  local ok, decoded = pcall(vim.json.decode, table.concat(vim.fn.readfile(ipynb_path), "\n"))
+  if not ok or type(decoded) ~= "table" then
+    return { language = "python", extension = "py" }
+  end
+
+  local metadata = decoded.metadata or {}
+  local kernelspec = metadata.kernelspec or {}
+  local language_info = metadata.language_info or {}
+  local language = kernelspec.language or language_info.name or "python"
+
+  if language == "python3" then
+    language = "python"
+  end
+
+  local extension_map = {
+    python = "py",
+    julia = "jl",
+    r = "r",
+    R = "r",
+    bash = "sh",
+  }
+
+  return {
+    language = language,
+    extension = extension_map[language] or "py",
+  }
+end
+
+local function notebook_jupytext(args)
+  if vim.fn.executable("jupytext") ~= 1 then
+    return nil, "jupytext is not installed"
+  end
+
+  local env = vim.tbl_extend("force", vim.fn.environ(), {
+    JUPYTER_DATA_DIR = notebook_jupyter_data_dir(),
+  })
+
+  local result = vim.system(vim.list_extend({ "jupytext" }, args), {
+    env = env,
+    text = true,
+  }):wait()
+
+  if result.code ~= 0 then
+    local err = result.stderr ~= "" and result.stderr or result.stdout
+    return nil, vim.trim(err)
+  end
+
+  return result.stdout, result.stderr
+end
+
+local function load_ipynb_buffer(ipynb_path)
+  local metadata = notebook_metadata(ipynb_path)
+  local buf = vim.api.nvim_get_current_buf()
+  vim.bo[buf].swapfile = false
+  local content, err = notebook_jupytext({
+    ipynb_path,
+    "--to=" .. metadata.extension .. ":percent",
+    "--output=-",
+  })
+
+  if not content then
+    vim.notify(err, vim.log.levels.ERROR, { title = "Notebook" })
+    return false
+  end
+
+  local lines = vim.split(content, "\n", { plain = true })
+  if lines[#lines] == "" then
+    table.remove(lines, #lines)
+  end
+
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].filetype = metadata.language
+  vim.bo[buf].modified = false
+  vim.b[buf].notebook_language = metadata.language
+  vim.b[buf].notebook_extension = metadata.extension
+  return true
+end
+
+local function write_ipynb_buffer(event)
+  local ipynb_path = event.match
+  local buf = vim.api.nvim_get_current_buf()
+  local extension = vim.b[buf].notebook_extension or notebook_metadata(ipynb_path).extension
+  local temp_path = vim.fn.tempname() .. "." .. extension
+
+  vim.fn.writefile(vim.api.nvim_buf_get_lines(buf, 0, -1, false), temp_path)
+
+  local ok, err = notebook_jupytext({
+    temp_path,
+    "--update",
+    "--to=ipynb",
+    "--output=" .. ipynb_path,
+  })
+
+  vim.fn.delete(temp_path)
+
+  if not ok then
+    vim.notify(err, vim.log.levels.ERROR, { title = "Notebook" })
+    return
+  end
+
+  vim.api.nvim_set_option_value("modified", false, { buf = buf })
+
+  local post_write = event.event == "FileWriteCmd" and "FileWritePost" or "BufWritePost"
+  vim.api.nvim_exec_autocmds(post_write, { pattern = ipynb_path })
+end
+
+local notebook_io = vim.api.nvim_create_augroup("notebook-io", { clear = true })
+
+vim.api.nvim_create_autocmd("BufReadCmd", {
+  group = notebook_io,
+  pattern = "*.ipynb",
+  callback = function(ev)
+    load_ipynb_buffer(ev.match)
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufWriteCmd", "FileWriteCmd" }, {
+  group = notebook_io,
+  pattern = "*.ipynb",
+  callback = function(ev)
+    write_ipynb_buffer(ev)
+  end,
+})
+
+local function is_ipynb_buffer(bufnr)
+  local name = vim.api.nvim_buf_get_name(bufnr)
+  return name ~= "" and name:match("%.ipynb$")
+end
+
+local function set_notebook_view_highlights()
+  vim.api.nvim_set_hl(0, "NotebookCellDivider", { fg = "#5C6370", italic = true })
+  vim.api.nvim_set_hl(0, "NotebookMarkdownHeading", { fg = "#61AFEF", bold = true })
+  vim.api.nvim_set_hl(0, "NotebookMarkdownBullet", { fg = "#98C379" })
+  vim.api.nvim_set_hl(0, "NotebookMarkdownRule", { fg = "#E5C07B" })
+end
+
+local function apply_notebook_view_syntax(bufnr)
+  if not vim.api.nvim_buf_is_valid(bufnr) or not is_ipynb_buffer(bufnr) then
+    return
+  end
+
+  vim.api.nvim_buf_call(bufnr, function()
+    vim.cmd([[
+      silent! syntax clear NotebookCellDivider
+      silent! syntax clear NotebookMarkdownCell
+      silent! syntax clear NotebookMarkdownHeader
+      silent! syntax clear NotebookMarkdownPrefix
+      silent! syntax clear NotebookMarkdownHeading
+      silent! syntax clear NotebookMarkdownBullet
+      silent! syntax clear NotebookMarkdownRule
+      syntax match NotebookCellDivider /^# %%.*$/ containedin=ALLBUT,NotebookMarkdownCell
+      syntax region NotebookMarkdownCell start=/^# %% \[markdown\]$/ end=/^\(# %%\)\@=/me=s-1 keepend contains=NotebookMarkdownHeader,NotebookMarkdownPrefix,NotebookMarkdownHeading,NotebookMarkdownBullet,NotebookMarkdownRule
+      syntax match NotebookMarkdownHeader /^# %% \[markdown\]$/ contained conceal
+      syntax match NotebookMarkdownPrefix /^#\s\?/ contained conceal
+      syntax match NotebookMarkdownHeading /^# \zs#\+\s.*$/ contained
+      syntax match NotebookMarkdownBullet /^# \zs[-*+]\s.*$/ contained
+      syntax match NotebookMarkdownRule /^# \zs---\+$\|^# \zs\*\*\*+$\|^# \zs___\+$/ contained
+    ]])
+  end)
+end
+
+local function apply_notebook_view_options(bufnr, winid)
+  if not vim.api.nvim_buf_is_valid(bufnr) or not is_ipynb_buffer(bufnr) then
+    return
+  end
+
+  if winid and vim.api.nvim_win_is_valid(winid) then
+    vim.wo[winid].wrap = true
+    vim.wo[winid].linebreak = true
+    vim.wo[winid].breakindent = true
+    vim.wo[winid].conceallevel = 2
+    vim.wo[winid].concealcursor = "nc"
+    vim.wo[winid].spell = false
+    vim.wo[winid].list = false
+  end
+
+  apply_notebook_view_syntax(bufnr)
+end
+
 vim.o.statusline = table.concat({
   "%<",
   " %f",
@@ -1017,6 +1205,29 @@ vim.o.statusline = table.concat({
 })
 _G.git_statusline_component = git_statusline_component
 _G.notebook_statusline_component = notebook_statusline_component
+
+set_notebook_view_highlights()
+
+local notebook_view_ui = vim.api.nvim_create_augroup("notebook-view-ui", { clear = true })
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter", "WinEnter" }, {
+  group = notebook_view_ui,
+  callback = function(args)
+    local winid = vim.api.nvim_get_current_win()
+    if vim.api.nvim_win_get_buf(winid) ~= args.buf then
+      return
+    end
+
+    apply_notebook_view_options(args.buf, winid)
+  end,
+})
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = notebook_view_ui,
+  callback = function()
+    set_notebook_view_highlights()
+  end,
+})
 
 -- Auto reload when files change outside nvim
 vim.o.autoread = true
@@ -1457,25 +1668,6 @@ require("lazy").setup({
             render_terminal_sidebar()
           end)
         end,
-      })
-    end,
-  },
-
-  -- Open ipynb files as readable percent-format notebooks
-  {
-    "GCBallesteros/jupytext.nvim",
-    lazy = false,
-    config = function()
-      require("jupytext").setup({
-        style = "percent",
-        output_extension = "auto",
-        custom_language_formatting = {
-          python = {
-            extension = "py",
-            style = "percent",
-            force_ft = "python",
-          },
-        },
       })
     end,
   },
