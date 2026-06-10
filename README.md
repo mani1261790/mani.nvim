@@ -1,6 +1,6 @@
-# Neovim 単一ファイル設定
+# mani.nvim
 
-`init.lua` 1 ファイルを中心に構成した、導入しやすい Neovim 設定です。  
+`mani.nvim` は、`init.lua` 1 ファイルを中心に構成した、導入しやすい Neovim 設定です。  
 ファイルツリー、補完、LSP、ターミナル、ノートブック操作までまとめて使えるようにしてあります。
 
 ## 特徴
@@ -26,7 +26,7 @@
 既存の設定を残したい場合は、先に `~/.config/nvim` を退避してください。
 
 ```bash
-git clone https://github.com/mani1261790/nvim-single-file-config.git ~/.config/nvim
+git clone https://github.com/mani1261790/mani.nvim.git ~/.config/nvim
 nvim
 ```
 
