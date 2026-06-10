@@ -1,64 +1,80 @@
-# nvim-single-file-config
+# Neovim 単一ファイル設定
 
-Single-file Neovim configuration built around `init.lua`, with a VS Code-like layout:
+`init.lua` 1 ファイルを中心に構成した、導入しやすい Neovim 設定です。  
+ファイルツリー、補完、LSP、ターミナル、ノートブック操作までまとめて使えるようにしてあります。
 
-- left column: file tree + terminal list
-- right column: editor on top + one shared terminal panel on bottom
+## 特徴
 
-## Features
+- `init.lua` 中心のシンプルな構成
+- 左側にファイルツリー、右側に編集エリアという分かりやすい画面構成
+- 下部ターミナルでコマンド実行をしながら編集できる
+- LSP による補完、定義ジャンプ、診断表示に対応
+- `ipynb` を開いて扱いやすくするノートブック向け機能を用意
+- Git のブランチや差分を Neovim 上で確認しやすい
 
-- single-file config centered on `init.lua`
-- persistent terminal workflow with a terminal list in the sidebar
-- one shared terminal panel that switches terminals instead of stacking splits
-- cwd sync between terminal and file tree via OSC 7
-- notebook-friendly setup with `jupytext`, `molten`, and `NotebookNavigator`
-- direct panel navigation keys
+## 必要環境
 
-## Direct keys
-
-- `F1`: file tree
-- `F2`: editor
-- `F3`: terminal
-- `F4`: terminal list
-- `F7`: soft restart in the same working directory
-- `F8`: next panel
-- `Shift-F8`: previous panel
-
-## Files tracked in this repo
-
-- `init.lua`
-- `lazy-lock.json`
-- `terminal-hooks.zsh`
-- `.gitignore`
-
-## Why `.gitignore` is kept
-
-This config creates or coexists with local-only files that should not be published:
-
-- `plugged/`
-- `.DS_Store`
-- `.nvimlog`
-- swap / backup / temp files
-
-Keeping `.gitignore` in the repo prevents accidental pushes of local plugin installs and machine-specific noise.
-
-## Requirements
-
-- Neovim 0.11+
+- Neovim 0.11 以上
 - `git`
-- a terminal with function keys available to Neovim
-- Nerd Font recommended
+- Nerd Font 対応フォント
+- `python3`
 
-## Install
+ノートブック機能も使いたい場合は、Jupyter 関連の Python パッケージも必要です。
+
+## インストール
+
+既存の設定を残したい場合は、先に `~/.config/nvim` を退避してください。
 
 ```bash
 git clone https://github.com/mani1261790/nvim-single-file-config.git ~/.config/nvim
 nvim
 ```
 
-On first launch, plugins are installed automatically through `lazy.nvim`.
+初回起動時に `lazy.nvim` 経由でプラグインが自動インストールされます。  
+インストール完了後、Neovim を開き直すと安定して使い始めやすいです。
 
-## Notes
+## 画面構成
 
-- `Cmd`-based shortcuts are not relied on because many terminal apps intercept them before Neovim receives them.
-- The restart command is a soft restart that rebuilds the layout in the current working directory.
+- 左: ファイルツリーとターミナル一覧
+- 右上: エディタ
+- 右下: 共通ターミナル
+
+VS Code に近い感覚で、ファイルを開きながらターミナルも併用できます。
+
+## 基本キー
+
+- `F1`: ファイルツリーへ移動
+- `F2`: エディタへ移動
+- `F3`: 下部ターミナルへ移動
+- `F4`: ターミナル一覧へ移動
+- `F7`: 現在の作業ディレクトリのまま Neovim を再起動
+- `F8`: 次のパネルへ移動
+- `Shift-F8`: 前のパネルへ移動
+
+## ノートブックを使う場合
+
+`.ipynb` をそのまま扱うための設定を入れています。  
+セル実行まで使いたい場合は、Python 側で Jupyter 関連パッケージを入れてください。
+
+例:
+
+```bash
+python3 -m pip install --user pynvim jupyter_client nbformat jupytext ipykernel
+```
+
+環境によっては、Neovim 側でリモートプラグインの更新が必要です。
+
+```bash
+nvim --headless "+UpdateRemotePlugins" +qa
+```
+
+## この設定でできること
+
+- ファイルを開く、検索する、編集する
+- 補完を使いながらコードを書く
+- 定義ジャンプや診断確認を行う
+- ターミナルでコマンドを実行しながら作業する
+- Git の差分を確認する
+- Jupyter ノートブックを編集しやすい形で扱う
+
+Neovim をこれから使い始める人でも、最低限のセットアップでそのまま開発に入りやすい構成を目指しています。
