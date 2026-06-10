@@ -676,15 +676,15 @@ close_terminal_by_id = function(term_id)
 
   term:shutdown()
 
-  if was_visible then
-    local remaining = toggleterm_terminal.get_all()
-    table.sort(remaining, function(a, b)
-      return a.id < b.id
-    end)
+  local remaining = toggleterm_terminal.get_all()
+  table.sort(remaining, function(a, b)
+    return a.id < b.id
+  end)
 
-    if #remaining > 0 then
-      open_named_terminal(remaining[1].id, remaining[1].display_name)
-    end
+  if #remaining == 0 then
+    open_named_terminal(1, "Terminal 1")
+  elseif was_visible then
+    open_named_terminal(remaining[1].id, remaining[1].display_name)
   end
 
   render_terminal_sidebar()
