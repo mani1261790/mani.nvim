@@ -25,6 +25,16 @@
 
 既存の設定を残したい場合は、先に `~/.config/nvim` を退避してください。
 
+最短で試すだけなら、`init.lua` だけを `~/.config/nvim/` に置けば動きます。
+
+```bash
+mkdir -p ~/.config/nvim
+curl -L https://raw.githubusercontent.com/mani1261790/mani.nvim/main/init.lua -o ~/.config/nvim/init.lua
+nvim
+```
+
+設定をそのまま再現したい場合は、リポジトリごと入れる方法が向いています。
+
 ```bash
 git clone https://github.com/mani1261790/mani.nvim.git ~/.config/nvim
 nvim
@@ -32,6 +42,12 @@ nvim
 
 初回起動時に `lazy.nvim` 経由でプラグインが自動インストールされます。  
 インストール完了後、Neovim を開き直すと安定して使い始めやすいです。
+
+## 同梱ファイル
+
+- `init.lua`: メインの設定ファイルです
+- `lazy-lock.json`: プラグインのバージョンを固定し、環境差分を減らします
+- `terminal-hooks.zsh`: Neovim 内ターミナルで作業ディレクトリ連携や `open` の補助を行います
 
 ## 画面構成
 
